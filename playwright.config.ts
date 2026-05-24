@@ -9,7 +9,9 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 2 : undefined,
+  // One worker per CI shard: parallelism comes from sharding across runners, and a single login
+  // per shard avoids hammering the shared LambdaTest account with concurrent OAuth sessions.
+  workers: process.env.CI ? 1 : undefined,
   timeout: 30_000,
   expect: { timeout: 10_000 },
 

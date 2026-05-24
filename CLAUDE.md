@@ -93,5 +93,7 @@ Key SUT reality (see test-strategy.md Risk 3 / README API note): two disconnecte
 The integration test creates via UI and verifies via the captured-bearer TMS client
 (`src/api/TmsProjectsClient.ts`, `tms` fixture).
 
-Next: Task 3 (CI pipeline or analytics dashboard) — includes hosting the report and a failing-run
-sample with artifacts.
+Task 3 = Option A (CI). `.github/workflows/ci.yml`: 2-way sharded run on push/PR → merge shard
+blobs into one Playwright HTML report (artifact + GitHub Pages) → notify on failure (status check
++ optional Slack). CI uses 1 worker per shard to avoid concurrent-login churn on the shared account.
+Sharding + blob-merge flow validated locally.

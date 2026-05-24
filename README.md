@@ -102,13 +102,21 @@ npm run report
 
 ---
 
-## CI / GitHub Actions
+## CI / GitHub Actions (Task 3 — Option A)
 
-Push to any branch or open a PR → GitHub Actions runs the full suite across 2 shards in
-parallel. After both shards complete, Allure results are merged and published as a GitHub
-Pages artifact.
+Workflow: [`.github/workflows/ci.yml`](.github/workflows/ci.yml). On every **push to `main`** and
+every **PR**:
 
-Set these repository secrets in **Settings → Secrets and variables → Actions**:
+1. **Sharded run** — the suite runs across a **2-way shard matrix** (`--shard=1/2`, `2/2`) on two
+   runners in parallel, each emitting a `blob` report (the bonus parallelisation).
+2. **Merge & publish** — a `report` job (runs even if a shard failed) merges the shard blobs into a
+   single **Playwright HTML report**, uploads it as the **`playwright-html-report` artifact**, and
+   on `main` publishes it to **GitHub Pages** (hosted link).
+3. **Notify on failure** — the workflow's red **commit/PR status check** is the primary signal
+   (GitHub also emails the actor); a `notify` job additionally posts to **Slack** when a
+   `SLACK_WEBHOOK_URL` secret is set, and writes a failure job-summary pointing at the report.
+
+Required repository secrets (**Settings → Secrets and variables → Actions**):
 
 | Secret | Value |
 |---|---|
@@ -116,6 +124,18 @@ Set these repository secrets in **Settings → Secrets and variables → Actions
 | `LT_EMAIL` | Your LambdaTest email |
 | `LT_PASSWORD` | Your LambdaTest password |
 | `LT_ACCESS_KEY` | Your LambdaTest access key |
+| `SLACK_WEBHOOK_URL` | *(optional)* Slack incoming webhook for failure pings |
+
+To enable the hosted report: **Settings → Pages → Build and deployment → Deploy from a branch →
+`gh-pages`**. The Pages step is `continue-on-error`, so CI stays green even before Pages is enabled.
+
+### Why Option A (CI) over Option B (analytics dashboard)
+
+Tests that don't run on every change rot. A pipeline gives the team the highest-leverage signal
+first: every push/PR gets a pass/fail gate, a shareable report with failure screenshots/traces, and
+a failure alert — the foundation a trends dashboard would later consume. An analytics view is
+valuable but secondary; it needs a corpus of real runs to be meaningful, and CI is what produces
+that corpus. So CI comes first.
 
 ---
 

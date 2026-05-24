@@ -1,0 +1,121 @@
+name: CI
+
+# Runs the Playwright suite on every push to main and every PR, sharded across two runners.
+# Merges the shard reports into a single HTML report (published as an artifact + to GitHub Pages),
+# and notifies on failure. See README "CI / GitHub Actions" for setup and the Task-3 rationale.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Cancel superseded runs on the same ref to save minutes.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Tests (shard ${{ matrix.shard }}/2)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    env:
+      CI: 'true'
+      LT_USERNAME: ${{ secrets.LT_USERNAME }}
+      LT_EMAIL: ${{ secrets.LT_EMAIL }}
+      LT_PASSWORD: ${{ secrets.LT_PASSWORD }}
+      LT_ACCESS_KEY: ${{ secrets.LT_ACCESS_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browser (chromium)
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright tests (sharded)
+        run: npx playwright test --project=chromium --shard=${{ matrix.shard }}/2 --reporter=blob
+
+      - name: Upload blob report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: blob-report-${{ matrix.shard }}
+          path: blob-report/
+          retention-days: 7
+
+  report:
+    name: Merge reports & publish
+    # Run even if a shard failed, so the report always covers the full run.
+    if: ${{ !cancelled() }}
+    needs: [test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download all shard blob reports
+        uses: actions/download-artifact@v4
+        with:
+          path: all-blob-reports
+          pattern: blob-report-*
+          merge-multiple: true
+
+      - name: Merge into a single HTML report
+        run: npx playwright merge-reports --reporter=html ./all-blob-reports
+
+      - name: Upload merged HTML report (artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-html-report
+          path: playwright-report/
+          retention-days: 14
+
+      - name: Publish report to GitHub Pages
+        # Bonus hosted link. Only on main; non-blocking if Pages isn't enabled on the repo.
+        if: ${{ github.ref == 'refs/heads/main' }}
+        continue-on-error: true
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./playwright-report
+
+  notify:
+    name: Notify on failure
+    needs: [test, report]
+    if: ${{ failure() }}
+    runs-on: ubuntu-latest
+    env:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+    steps:
+      # GitHub already surfaces failure via the commit/PR status check and emails the actor.
+      # This adds an optional Slack ping when SLACK_WEBHOOK_URL is configured.
+      - name: Slack notification (if webhook configured)
+        if: ${{ env.SLACK_WEBHOOK_URL != '' }}
+        run: |
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          MSG=":x: Playwright CI failed on ${{ github.ref_name }} (${{ github.sha }}). Run: $RUN_URL"
+          curl -sS -X POST -H 'Content-type: application/json' \
+            --data "{\"text\":\"$MSG\"}" "$SLACK_WEBHOOK_URL"
+
+      - name: Failure summary
+        run: |
+          echo "### ❌ Playwright CI failed" >> "$GITHUB_STEP_SUMMARY"
+          echo "Download the **playwright-html-report** artifact for failure screenshots, traces, and logs." >> "$GITHUB_STEP_SUMMARY"
