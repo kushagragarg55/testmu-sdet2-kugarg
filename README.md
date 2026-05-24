@@ -143,6 +143,26 @@ that corpus. So CI comes first.
 
 ---
 
+## What I'd build next with more time
+
+- **Analytics dashboard (Option B)** — feed CI run history into a small dashboard for pass/fail
+  trends, flaky-test detection (passed-on-retry), and slowest-test tracking. CI now produces the
+  run corpus that makes this meaningful.
+- **Edit & delete project UI flows** — only create is exercised in the UI today; add the
+  `row-actions` edit/delete paths.
+- **Contract tests** — validate API responses against a published OpenAPI spec instead of the
+  hand-written shape check in `expectSchema`.
+- **5xx / fault injection** — route-intercept or a proxy to force server errors (the live API
+  won't emit 5xx on demand) and assert the client's handling.
+- **Accessibility + visual regression** — `@axe-core/playwright` on key pages and per-browser
+  dashboard snapshots.
+- **TMS token robustness** — refresh/re-capture the UI bearer token mid-run for long suites, and
+  isolate the `/tms` contract behind a versioned client so changes are a one-file fix.
+- **Cross-browser in CI** — add a firefox/webkit smoke job (today CI shards chromium; cross-browser
+  runs locally via `npm run test:smoke`).
+
+---
+
 ## License
 
 MIT
