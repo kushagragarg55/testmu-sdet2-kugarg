@@ -104,6 +104,10 @@ npm run report
 
 ## CI / GitHub Actions (Task 3 — Option A)
 
+**Hosted report:** https://kushagragarg55.github.io/testmu-sdet2-kugarg/ (published from each
+`main` run). The merged HTML report is also downloadable as the `playwright-html-report` artifact
+on every run.
+
 Workflow: [`.github/workflows/ci.yml`](.github/workflows/ci.yml). On every **push to `main`** and
 every **PR**:
 
