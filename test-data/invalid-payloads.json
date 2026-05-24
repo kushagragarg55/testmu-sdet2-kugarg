@@ -1,0 +1,17 @@
+[
+  {
+    "description": "missing name field",
+    "payload": { "description": "no name provided" },
+    "expectedStatuses": [400, 422]
+  },
+  {
+    "description": "empty name",
+    "payload": { "name": "" },
+    "expectedStatuses": [400, 422]
+  },
+  {
+    "description": "name wrong type (number)",
+    "payload": { "name": 12345 },
+    "expectedStatuses": [400, 422]
+  }
+]

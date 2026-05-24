@@ -1,0 +1,5 @@
+[
+  { "name": "Regression Suite", "description": "End-to-end regression coverage" },
+  { "name": "Smoke Pack", "description": "Fast pre-deploy smoke checks" },
+  { "name": "API Contract Tests", "description": "Schema and response-time guards" }
+]

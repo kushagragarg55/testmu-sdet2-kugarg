@@ -18,8 +18,10 @@ This framework follows a **three-layer test pyramid**:
   form interactions. We do not use UI tests to verify data persistence — that's the API layer's job.
 - **API tests** provide the broadest functional coverage. They run in a single browser context
   (Chromium) because browser choice has no effect on HTTP request behaviour.
-- **Integration tests** validate that UI and API layers are consistent with each other
-  (e.g., data created via API appears correctly in the UI).
+- **Integration tests** validate that UI and API layers are consistent with each other. Note the
+  direction: we create through the **UI** and confirm via the **API**, not the reverse. This is a
+  deliberate choice forced by the SUT — see Risk 3 (the access-key API and the UI resolve different
+  principals/scopes, so a project created via the access-key API never appears in the UI).
 
 ---
 
@@ -29,10 +31,10 @@ This framework follows a **three-layer test pyramid**:
 
 | Test file | What it covers | Why it matters |
 |---|---|---|
-| `login.spec.ts` | Valid login, invalid creds, empty fields, forgot-password link | Login is the entry gate; any regression here blocks every other test |
-| `dashboard.spec.ts` | Projects list visibility, project click, nav links | Core navigation — if the dashboard is broken, no workflow is reachable |
-| `projects.spec.ts` | Create project modal, validation, success toast | Primary create flow; must work before API-to-UI integration tests |
-| `cross-browser.spec.ts` | Login + dashboard on Chromium, Firefox, WebKit | Catches rendering regressions; tagged `@smoke` for fast pre-deploy checks |
+| `login.spec.ts` | Valid login lands in app; invalid/empty/malformed credentials (data-driven) stay out | Login is the entry gate; any regression here blocks every other test |
+| `dashboard.spec.ts` | Projects landing loads; primary chrome + create action present | Core landing — if the dashboard is broken, no workflow is reachable |
+| `projects.spec.ts` | Open create drawer; create a project and see it in the list | Primary create flow; must work before the UI→API integration test |
+| `cross-browser.spec.ts` | Authenticated dashboard on Chromium, Firefox, WebKit (`@smoke`) | Catches rendering/engine regressions; fast pre-deploy multi-browser check |
 
 ### API
 
@@ -40,17 +42,34 @@ This framework follows a **three-layer test pyramid**:
 |---|---|---|
 | `auth.spec.ts` | 200 with valid creds, 401 with wrong key, 401 with no header | Auth failures are silent data leaks; must be explicit |
 | `projects-crud.spec.ts` | Full CRUD lifecycle + schema validation + response-time assertions | Validates the primary resource the app manages |
-| `error-handling.spec.ts` | 404 on unknown ID, 422/400 on bad payloads | Clients need predictable error contracts; catch regressions early |
+| `error-handling.spec.ts` | 404 on unknown ID, 422/400 on bad payloads (data-driven) | Clients need predictable error contracts; catch regressions early |
+
+> **On 5xx:** the live API exposes no deterministic way to force a server error, so we don't assert
+> a specific 5xx. Our `expectStatus` helper handles any status, and **fault-injection for 5xx** is
+> listed under "What We'd Cover Next". Coverage here focuses on the 4xx the API actually returns.
 
 ### Integration
 
 | Test file | What it covers | Why it matters |
 |---|---|---|
-| `api-to-ui.spec.ts` | POST project via API → assert visible in UI → DELETE cleanup | Proves API and UI are reading from the same data source |
+| `api-to-ui.spec.ts` | Create project via UI → assert it shows in the UI list → confirm the same record via the Test Manager API → cleanup | Proves the UI and the API it uses read/write one data source |
 
 ---
 
-## 3. Key Risks
+## 3. What We'd Cover Next
+
+1. **Edit & delete project UI flows** — currently only create is exercised in the UI (`row-actions`).
+2. **5xx / fault injection** — proxy or route-intercept to force server errors and assert the
+   client's handling, since the live API won't emit 5xx on demand.
+3. **API schema contract tests** — validate responses against a published OpenAPI spec rather than
+   the hand-written shape in `expectSchema`.
+4. **Pagination & search** — projects list beyond page 1, and the `projects.list.search` filter.
+5. **Accessibility smoke** — `@axe-core/playwright` scan on login + dashboard.
+6. **Visual regression** — snapshot the dashboard per browser to catch rendering drift.
+
+---
+
+## 4. Key Risks
 
 ### Risk 1 — API endpoint instability
 **Description**: The LambdaTest Test Manager API base URL and route structure are not fully

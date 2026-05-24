@@ -1,0 +1,26 @@
+[
+  {
+    "description": "wrong password",
+    "email": "valid-but-wrong@example.com",
+    "password": "definitely-wrong-password",
+    "expectedError": "invalid"
+  },
+  {
+    "description": "empty email",
+    "email": "",
+    "password": "somePassword123",
+    "expectedError": "required"
+  },
+  {
+    "description": "empty password",
+    "email": "user@example.com",
+    "password": "",
+    "expectedError": "required"
+  },
+  {
+    "description": "malformed email",
+    "email": "not-an-email",
+    "password": "somePassword123",
+    "expectedError": "valid"
+  }
+]

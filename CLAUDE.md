@@ -84,6 +84,14 @@ results, publishes the report as an artifact, notifies on failure. Repo secrets:
 
 ## Current state
 
-Scaffold stage: docs (`README.md`, `test-strategy.md`, `ai-usage-log.md`) and folder structure
-exist; source files and tests are not yet implemented (`.gitkeep` placeholders). No
-`package.json` or `playwright.config.ts` yet.
+Tasks 1 and 2 complete. Full framework built and green against the live SUT: 23 tests pass on
+chromium (API 12, UI 10, integration 1); cross-browser smoke passes on chromium/firefox/webkit.
+Reports generate to `playwright-report/` + `allure-results/`.
+
+Key SUT reality (see test-strategy.md Risk 3 / README API note): two disconnected project APIs —
+`/projects` (Basic Auth, used by API tests) and `/tms/projects` (UI's bearer-token, product-scoped).
+The integration test creates via UI and verifies via the captured-bearer TMS client
+(`src/api/TmsProjectsClient.ts`, `tms` fixture).
+
+Next: Task 3 (CI pipeline or analytics dashboard) — includes hosting the report and a failing-run
+sample with artifacts.
